@@ -1,9 +1,10 @@
 const CORE_SYMBOLS=['QQQ','RSP','SPY','SOXX','XLK','XLV','XLF','XLI'];
 const EXTENDED_SYMBOLS=['XLE','XLU','XLP','XLB','XLY','XLC'];
+const STOCK_SYMBOLS=['GEV','CRWD','RKLB','VRTX','FCX'];
 
 export default async function handler(req,res){
-  const batch=req.query?.batch==='extended'?'extended':'core';
-  const symbols=batch==='extended'?EXTENDED_SYMBOLS:CORE_SYMBOLS;
+  const batch=['extended','stocks'].includes(req.query?.batch)?req.query.batch:'core';
+  const symbols=batch==='stocks'?STOCK_SYMBOLS:batch==='extended'?EXTENDED_SYMBOLS:CORE_SYMBOLS;
   const key=process.env.TWELVE_DATA_API_KEY;
   if(!key){
     res.setHeader('Cache-Control','no-store');
