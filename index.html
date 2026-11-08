@@ -9,6 +9,7 @@ const cell=n=>`<span class="${n>0?'positive':n<0?'negative':'neutral'}">${fmt(n)
 const marketResults={};
 let extendedScheduled=false;
 let extendedLoaded=false;
+let scheduledTimer=null;
 
 function render(){
   const all=Object.values(marketResults);
@@ -75,6 +76,38 @@ async function load(){
     btn.disabled=false;
   }
 }
-document.getElementById('refresh').addEventListener('click',load);
-load();
+// Automatische Aktualisierung nach lokaler Browserzeit: 15:00 und 22:30.
+// Die Seite muss dafür geöffnet bleiben. Der zweite ETF-Batch folgt mit 65 Sekunden Abstand.
+async function runScheduledRefresh(){
+  extendedScheduled=false;
+  extendedLoaded=false;
+  Object.keys(marketResults).forEach(k=>delete marketResults[k]);
+  await load();
+  scheduleNextRefresh();
+}
+function scheduleNextRefresh(){
+  const now=new Date();
+  const slots=[[15,0],[22,30]];
+  let next=null;
+  for(const [hour,minute] of slots){
+    const candidate=new Date(now);
+    candidate.setHours(hour,minute,0,0);
+    if(candidate>now&&(!next||candidate<next))next=candidate;
+  }
+  if(!next){
+    next=new Date(now);
+    next.setDate(next.getDate()+1);
+    next.setHours(15,0,0,0);
+  }
+  const label=next.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('message').textContent='Automatische Aktualisierung geplant: '+label+' Uhr (deutsche Browserzeit). Seite geöffnet lassen.';
+  if(scheduledTimer)clearTimeout(scheduledTimer);
+  scheduledTimer=setTimeout(runScheduledRefresh,next.getTime()-now.getTime());
+}
+document.getElementById('refresh').addEventListener('click',async()=>{
+  if(scheduledTimer)clearTimeout(scheduledTimer);
+  await load();
+  scheduleNextRefresh();
+});
+load().finally(scheduleNextRefresh);
 </script></body></html>
